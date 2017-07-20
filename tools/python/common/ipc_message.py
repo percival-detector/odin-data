@@ -36,7 +36,7 @@ class IpcMessage(object):
         try:
             is_valid = is_valid & (self._get_attr("msg_type") is not None)
             is_valid = is_valid & (self._get_attr("msg_val") is not None)
-            is_valid = is_valid & (self._get_attr("timestamp") is not None)
+            # is_valid = is_valid & (self._get_attr("timestamp") is not None)
         except IpcMessageException:
             is_valid = False
 

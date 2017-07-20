@@ -52,6 +52,32 @@ class FrameProcessorClient(ZMQClient):
         }
         self.send_configuration(self.FILE_WRITER, config)
 
+    def kill(self):
+        config = {
+            "shutdown": True
+        }
+        self.send_configuration_dict(**config)
+
+    def initialise(self, connections):
+        for plugin in connections.keys():
+            self.load_plugin(plugin)
+        for sink, source in connections.items():
+            self.connect_plugins(source, sink)
+
+        status = self.request_status()
+        if self.FILE_WRITER not in status.keys():
+            raise RuntimeError("Cannot initialise unless hdf plugin is loaded")
+
+        hdf_status = status[self.FILE_WRITER]
+        if ("processes" not in hdf_status.keys()
+                or hdf_status["processes"] != self.processes) \
+                or ("rank" not in hdf_status.keys()
+                    or hdf_status["rank"] != self.rank):
+            if hdf_status["writing"]:
+                raise RuntimeError(
+                    "Cannot initialise while writing - Abort and restart")
+            self.configure_file_process()
+
     def configure_shared_memory(self, shared_memory, ready, release):
         config = {
             "fr_shared_mem": shared_memory,
@@ -64,19 +90,23 @@ class FrameProcessorClient(ZMQClient):
         self.send_configuration(self.META, self.meta_endpoint)
 
     def load_plugin(self, plugin):
-        library, name = self.parse_plugin_definition(plugin,
-                                                     self.LIBRARIES[plugin])
-        self.request_status()
-        config = {
-            "load": {
-                "library": library,
-                "index": plugin,
-                "name": name,
+        if plugin == self.FILE_WRITER:
+            self.load_file_writer_plugin(plugin)
+        else:
+            library, name = self.parse_plugin_definition(
+                plugin, self.LIBRARIES[plugin])
+            self.request_status()
+            config = {
+                "load": {
+                    "library": library,
+                    "index": plugin,
+                    "name": name,
+                }
             }
-        }
-        self.send_configuration(self.PLUGIN, config,
-                                valid_error="Cannot load plugin with index = "
-                                            "{}, already loaded".format(plugin))
+            self.send_configuration(
+                self.PLUGIN, config,
+                valid_error="Cannot load plugin with index = {},"
+                            " already loaded".format(plugin))
 
     def load_file_writer_plugin(self, index):
         config = {
