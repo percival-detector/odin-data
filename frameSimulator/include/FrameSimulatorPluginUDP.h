@@ -20,6 +20,7 @@ using namespace log4cxx::helpers;
 
 #include <iostream>
 #include <sstream>
+#include <list>
 
 namespace FrameSimulator {
 
@@ -49,7 +50,6 @@ namespace FrameSimulator {
     protected:
 
         static void pkt_callback(u_char *user, const pcap_pkthdr *hdr, const u_char *buffer);
-        int send_packet(const boost::shared_ptr<Packet>& packet, const int& frame) const;
 
         /** Extract frames from pcap read data **/
         virtual void extract_frames(const u_char* data, const int& size) = 0;
@@ -81,8 +81,23 @@ namespace FrameSimulator {
 
     private:
 
-        std::vector<struct sockaddr_in> m_addrs;
-        int m_socket;
+        struct Target
+        {
+            void init(FrameSimulatorPluginUDP* parent, sockaddr_in addr);
+            void shutdown();
+
+            void queuePacket(Packet pkt)
+            {
+                m_packetsToSend.push_back(pkt);
+            }
+            void sendPackets();
+
+            FrameSimulatorPluginUDP* parent_;
+            sockaddr_in m_addr;
+            std::list<Packet> m_packetsToSend;
+            int socket_;
+        };
+        std::vector<Target> m_targets;
 
         //Used by send_packet to send each frame to the correct port
         mutable int curr_port_index;
