@@ -88,20 +88,16 @@ namespace FrameSimulator {
 
             void queuePacket(Packet pkt)
             {
-                m_packetsToSend.push_back(pkt);
+                packetsToSend_.push_back(pkt);
             }
             void sendPackets();
 
             FrameSimulatorPluginUDP* parent_;
             sockaddr_in m_addr;
-            std::list<Packet> m_packetsToSend;
+            std::list<Packet> packetsToSend_;
             int socket_;
         };
-        std::vector<Target> m_targets;
-
-        //Used by send_packet to send each frame to the correct port
-        mutable int curr_port_index;
-        mutable int curr_frame;
+        std::vector<Target> targets_;
 
         pcap_t *m_handle;
         char errbuf[PCAP_ERRBUF_SIZE];

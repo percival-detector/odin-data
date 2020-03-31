@@ -12,18 +12,11 @@
 
 namespace FrameSimulator {
 
-    /** Construct a FrameSimulatorPluginUDP
-     * setup an instance of the logger
-     * initialises curr_frame and curr_port_index for handling assignment of frames to appropriate ports
-     */
     FrameSimulatorPluginUDP::FrameSimulatorPluginUDP() : FrameSimulatorPlugin() {
 
         // Setup logging for the class
         logger_ = Logger::getLogger("FS.FrameSimulatorPluginUDP");
         logger_->setLevel(Level::getAll());
-
-        curr_frame = 0;
-        curr_port_index = 0;
 
     }
 
@@ -84,7 +77,7 @@ namespace FrameSimulator {
             LOG4CXX_DEBUG(logger_, "Targeting port " + dest_ports[p]);
             Target tgt;
             tgt.init(this, addr);
-            m_targets.push_back(tgt);
+            targets_.push_back(tgt);
         }
 
         if (pcap_playback_) {
@@ -184,13 +177,13 @@ namespace FrameSimulator {
                     }
                 }
 
-                m_targets.at(n).queuePacket(*frames_[n].packets[p]);
+                targets_.at(n).queuePacket(*frames_[n].packets[p]);
                 frame_bytes_sent += frames_[n].packets[p]->size;
                 frame_packets_sent += 1;
 
             }
 
-            m_targets.at(n).sendPackets();
+            targets_.at(n).sendPackets();
 
             time(&end_time);
 
@@ -227,11 +220,11 @@ namespace FrameSimulator {
                                boost::lexical_cast<std::string>(total_packets_dropped) + " packets (" +
                                boost::lexical_cast<std::string>(float(100.0*total_packets_dropped)/(total_packets_dropped + total_packets_sent)) + "%)");
 
-        for(int i=0;i<m_targets.size();++i)
+        for(int i=0;i<targets_.size();++i)
         {
-            m_targets[i].shutdown();
+            targets_[i].shutdown();
         }
-        m_targets.clear();
+        targets_.clear();
     }
 
     /** Populate boost program options with appropriate command line options for plugin
@@ -282,11 +275,11 @@ namespace FrameSimulator {
     void FrameSimulatorPluginUDP::Target::sendPackets()
     {
         int count = 0;
-        while(0<m_packetsToSend.size())
+        while(0<packetsToSend_.size())
         {
-            std::list<Packet>::iterator packet = m_packetsToSend.begin();
+            std::list<Packet>::iterator packet = packetsToSend_.begin();
             int numBytes = sendto(socket_, packet->data, packet->size, 0, (const sockaddr*)(&m_addr), sizeof(sockaddr) );
-            m_packetsToSend.erase(packet);
+            packetsToSend_.erase(packet);
 
                 // Add brief pause between 'packet_gap' frames if packet gap specified
             if (parent_->packet_gap_ && (count % parent_->packet_gap_.get() == 0)) 
