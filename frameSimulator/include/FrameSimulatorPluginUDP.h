@@ -92,11 +92,14 @@ namespace FrameSimulator {
             }
             void sendPackets();
             void logStats();
+            void flush();
 
             FrameSimulatorPluginUDP* parent_;
             sockaddr_in m_addr;
             std::list<Packet> packetsToSend_;
             int socket_;
+
+            int disorder_;
 
             int packets_sent_;
             int64_t bytes_sent_;

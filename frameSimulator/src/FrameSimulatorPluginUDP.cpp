@@ -272,9 +272,10 @@ namespace FrameSimulator {
     void FrameSimulatorPluginUDP::Target::sendPackets()
     {
         int count = 0;
-        while(0<packetsToSend_.size())
+        while(disorder_<packetsToSend_.size())
         {
             std::list<Packet>::iterator packet = packetsToSend_.begin();
+            std::advance(packet, disorder_ ? rand()%disorder_ : 0);
             int numBytes = sendto(socket_, packet->data, packet->size, 0, (const sockaddr*)(&m_addr), sizeof(sockaddr) );
             packets_sent_ += 1;
             bytes_sent_ += numBytes;
@@ -300,10 +301,12 @@ namespace FrameSimulator {
         bind(socket_, (const sockaddr*)(&addr), sizeof(sockaddr));
         packets_sent_ = 0;
         bytes_sent_ = 0;
+        disorder_ = 100;
     }
 
     void FrameSimulatorPluginUDP::Target::shutdown()
     {
+        flush();
         close(socket_);
     }
 
@@ -312,6 +315,12 @@ namespace FrameSimulator {
         LOG4CXX_DEBUG(parent_->logger_,
                                   "Target port " << m_addr.sin_port << " totals so far:\n packets sent: " << packets_sent_
                                   << "\n bytes sent: " << bytes_sent_);
+    }
+
+    void FrameSimulatorPluginUDP::Target::flush()
+    {
+        disorder_ = 0;
+        sendPackets();
     }
 }
 
