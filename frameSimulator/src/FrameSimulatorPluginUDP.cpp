@@ -180,10 +180,12 @@ namespace FrameSimulator {
                 targets_.at(n).queuePacket(*frames_[n].packets[p]);
                 frame_bytes_sent += frames_[n].packets[p]->size;
                 frame_packets_sent += 1;
-
             }
 
+            LOG4CXX_DEBUG(logger_, "Frame " << f << " dropped " << frame_packets_dropped << " packets");
+
             targets_.at(n).sendPackets();
+            targets_.at(n).logStats();
 
             time(&end_time);
 
@@ -201,11 +203,6 @@ namespace FrameSimulator {
                     nanosleep(&wait_spec, NULL);
                 }
             }
-
-            LOG4CXX_DEBUG(logger_, "Sent " + boost::lexical_cast<std::string>(frame_bytes_sent) + " bytes in " +
-                                   boost::lexical_cast<std::string>(frame_packets_sent) + " packets for frame " + boost::lexical_cast<std::string>(n) +
-                                   ", dropping " + boost::lexical_cast<std::string>(frame_packets_dropped) + " packets (" +
-                                   boost::lexical_cast<std::string>(float(100.0*frame_packets_dropped)/(frame_packets_dropped + frame_packets_sent)) + "%)");
 
             total_frames_sent += 1;
             total_packets_sent += frame_packets_sent;
@@ -279,6 +276,8 @@ namespace FrameSimulator {
         {
             std::list<Packet>::iterator packet = packetsToSend_.begin();
             int numBytes = sendto(socket_, packet->data, packet->size, 0, (const sockaddr*)(&m_addr), sizeof(sockaddr) );
+            packets_sent_ += 1;
+            bytes_sent_ += numBytes;
             packetsToSend_.erase(packet);
 
                 // Add brief pause between 'packet_gap' frames if packet gap specified
@@ -299,11 +298,20 @@ namespace FrameSimulator {
         socket_ = socket(PF_INET, SOCK_DGRAM, 0);
         m_addr = addr;
         bind(socket_, (const sockaddr*)(&addr), sizeof(sockaddr));
+        packets_sent_ = 0;
+        bytes_sent_ = 0;
     }
 
     void FrameSimulatorPluginUDP::Target::shutdown()
     {
         close(socket_);
+    }
+
+    void FrameSimulatorPluginUDP::Target::logStats()
+    {
+        LOG4CXX_DEBUG(parent_->logger_,
+                                  "Target port " << m_addr.sin_port << " totals so far:\n packets sent: " << packets_sent_
+                                  << "\n bytes sent: " << bytes_sent_);
     }
 }
 

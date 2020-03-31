@@ -91,11 +91,15 @@ namespace FrameSimulator {
                 packetsToSend_.push_back(pkt);
             }
             void sendPackets();
+            void logStats();
 
             FrameSimulatorPluginUDP* parent_;
             sockaddr_in m_addr;
             std::list<Packet> packetsToSend_;
             int socket_;
+
+            int packets_sent_;
+            int64_t bytes_sent_;
         };
         std::vector<Target> targets_;
 
